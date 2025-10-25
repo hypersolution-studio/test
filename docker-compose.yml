@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # API de Imóveis
+  api-imoveis:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: api-imoveis
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_APP=api_imoveis_exemplo.py
+    volumes:
+      - ./api_imoveis_exemplo.py:/app/api_imoveis_exemplo.py
+    networks:
+      - imobiliaria-network
+    restart: unless-stopped
+
+  # n8n - Automação de Workflows
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n-imobiliaria
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./whatsapp-imobiliaria-flow.json:/data/whatsapp-imobiliaria-flow.json
+    networks:
+      - imobiliaria-network
+    restart: unless-stopped
+
+  # MongoDB (opcional - para persistência de dados)
+  mongodb:
+    image: mongo:7
+    container_name: mongodb-imobiliaria
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
+      - MONGO_INITDB_DATABASE=imobiliaria
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - imobiliaria-network
+    restart: unless-stopped
+
+  # Redis (opcional - para cache e sessões)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-imobiliaria
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - imobiliaria-network
+    restart: unless-stopped
+
+networks:
+  imobiliaria-network:
+    driver: bridge
+
+volumes:
+  n8n-data:
+  mongodb-data:
+  redis-data:

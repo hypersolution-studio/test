@@ -1,0 +1,242 @@
+{
+  "exemplo_requisicao": {
+    "url": "https://sua-api-imoveis.com/buscar",
+    "method": "GET",
+    "params": {
+      "tipo_negocio": "aluguel",
+      "faixa_preco": "1500_3000",
+      "dormitorios": 2,
+      "tipo_imovel": "apartamento",
+      "tipo_sala": "integrada",
+      "vagas": 1,
+      "localizacao": "Centro"
+    }
+  },
+  "exemplo_resposta_sucesso": {
+    "imoveis": [
+      {
+        "id": 1001,
+        "titulo": "Apartamento Moderno com Vista",
+        "endereco": "Rua das Palmeiras, 456 - Centro",
+        "preco": "2800",
+        "dormitorios": 2,
+        "suites": 1,
+        "banheiros": 2,
+        "vagas": 1,
+        "area_m2": 72,
+        "area_util": 65,
+        "link": "https://sua-imobiliaria.com/imovel/1001",
+        "fotos": [
+          "https://sua-imobiliaria.com/fotos/1001/foto1.jpg",
+          "https://sua-imobiliaria.com/fotos/1001/foto2.jpg"
+        ],
+        "descricao": "Lindo apartamento com 2 dormitórios sendo 1 suíte, sala integrada com cozinha americana, varanda gourmet, 1 vaga de garagem coberta. Condomínio com piscina, academia e salão de festas.",
+        "caracteristicas": {
+          "condominio": "850",
+          "iptu": "120",
+          "mobiliado": false,
+          "aceita_pets": true,
+          "andar": 8,
+          "elevador": true,
+          "sacada": true,
+          "churrasqueira": true
+        },
+        "condominio_nome": "Residencial Vista Verde"
+      },
+      {
+        "id": 1002,
+        "titulo": "Apartamento Reformado no Centro",
+        "endereco": "Av. Principal, 789 - Centro",
+        "preco": "2500",
+        "dormitorios": 2,
+        "suites": 0,
+        "banheiros": 1,
+        "vagas": 1,
+        "area_m2": 68,
+        "area_util": 62,
+        "link": "https://sua-imobiliaria.com/imovel/1002",
+        "fotos": [
+          "https://sua-imobiliaria.com/fotos/1002/foto1.jpg",
+          "https://sua-imobiliaria.com/fotos/1002/foto2.jpg"
+        ],
+        "descricao": "Apartamento totalmente reformado, 2 quartos, sala integrada, cozinha planejada, área de serviço, 1 vaga. Ótima localização próximo a comércio e transporte público.",
+        "caracteristicas": {
+          "condominio": "620",
+          "iptu": "95",
+          "mobiliado": false,
+          "aceita_pets": false,
+          "andar": 4,
+          "elevador": false,
+          "sacada": false,
+          "churrasqueira": false
+        },
+        "condominio_nome": "Edifício Central Plaza"
+      },
+      {
+        "id": 1003,
+        "titulo": "Apartamento Compacto e Funcional",
+        "endereco": "Rua do Comércio, 234 - Centro",
+        "preco": "1950",
+        "dormitorios": 2,
+        "suites": 0,
+        "banheiros": 1,
+        "vagas": 1,
+        "area_m2": 55,
+        "area_util": 50,
+        "link": "https://sua-imobiliaria.com/imovel/1003",
+        "fotos": [
+          "https://sua-imobiliaria.com/fotos/1003/foto1.jpg",
+          "https://sua-imobiliaria.com/fotos/1003/foto2.jpg"
+        ],
+        "descricao": "Apartamento compacto e funcional, 2 dormitórios, sala integrada, cozinha americana, 1 vaga. Ideal para casal ou pequena família. Condomínio baixo.",
+        "caracteristicas": {
+          "condominio": "480",
+          "iptu": "75",
+          "mobiliado": true,
+          "aceita_pets": true,
+          "andar": 3,
+          "elevador": false,
+          "sacada": false,
+          "churrasqueira": false
+        },
+        "condominio_nome": "Residencial Compacto"
+      }
+    ],
+    "total_encontrados": 3,
+    "filtros_aplicados": {
+      "tipo_negocio": "aluguel",
+      "faixa_preco": "1500_3000",
+      "dormitorios": 2,
+      "tipo_imovel": "apartamento",
+      "tipo_sala": "integrada",
+      "vagas": 1,
+      "localizacao": "Centro"
+    },
+    "mensagem": "Encontramos 3 imóveis que correspondem aos seus critérios"
+  },
+  "exemplo_resposta_sem_resultados": {
+    "imoveis": [],
+    "total_encontrados": 0,
+    "filtros_aplicados": {
+      "tipo_negocio": "compra",
+      "faixa_preco": "ate_500k",
+      "dormitorios": 4,
+      "tipo_imovel": "cobertura",
+      "tipo_sala": "integrada",
+      "vagas": 3,
+      "localizacao": "Bairro Inexistente"
+    },
+    "mensagem": "Não encontramos imóveis com esses critérios no momento",
+    "sugestao": "Entre em contato com nossos corretores para opções personalizadas"
+  },
+  "exemplo_implementacao_api": {
+    "linguagem": "Node.js + Express",
+    "codigo": "// Exemplo de endpoint em Node.js\nconst express = require('express');\nconst app = express();\n\napp.get('/buscar', async (req, res) => {\n  const {\n    tipo_negocio,\n    faixa_preco,\n    dormitorios,\n    tipo_imovel,\n    tipo_sala,\n    vagas,\n    localizacao\n  } = req.query;\n\n  // Buscar no banco de dados\n  const imoveis = await db.imoveis.find({\n    tipo_negocio: tipo_negocio,\n    preco: getPrecoPorFaixa(faixa_preco),\n    dormitorios: parseInt(dormitorios),\n    tipo: tipo_imovel,\n    sala: tipo_sala !== 'tanto_faz' ? tipo_sala : undefined,\n    vagas: parseInt(vagas),\n    endereco: { $regex: localizacao, $options: 'i' }\n  });\n\n  res.json({\n    imoveis: imoveis,\n    total_encontrados: imoveis.length,\n    filtros_aplicados: req.query,\n    mensagem: `Encontramos ${imoveis.length} imóveis`\n  });\n});\n\nfunction getPrecoPorFaixa(faixa) {\n  const faixas = {\n    'ate_500k': { $lte: 500000 },\n    '500k_1m': { $gte: 500000, $lte: 1000000 },\n    '1m_2m': { $gte: 1000000, $lte: 2000000 },\n    'acima_2m': { $gte: 2000000 },\n    'ate_1500': { $lte: 1500 },\n    '1500_3000': { $gte: 1500, $lte: 3000 },\n    '3000_5000': { $gte: 3000, $lte: 5000 },\n    'acima_5000': { $gte: 5000 }\n  };\n  return faixas[faixa] || {};\n}\n\napp.listen(3000);"
+  },
+  "mapeamento_faixas_preco": {
+    "compra": {
+      "1": {
+        "codigo": "ate_500k",
+        "min": 0,
+        "max": 500000,
+        "descricao": "Até R$ 500.000"
+      },
+      "2": {
+        "codigo": "500k_1m",
+        "min": 500000,
+        "max": 1000000,
+        "descricao": "R$ 500.000 a R$ 1.000.000"
+      },
+      "3": {
+        "codigo": "1m_2m",
+        "min": 1000000,
+        "max": 2000000,
+        "descricao": "R$ 1.000.000 a R$ 2.000.000"
+      },
+      "4": {
+        "codigo": "acima_2m",
+        "min": 2000000,
+        "max": null,
+        "descricao": "Acima de R$ 2.000.000"
+      }
+    },
+    "aluguel": {
+      "5": {
+        "codigo": "ate_1500",
+        "min": 0,
+        "max": 1500,
+        "descricao": "Até R$ 1.500"
+      },
+      "6": {
+        "codigo": "1500_3000",
+        "min": 1500,
+        "max": 3000,
+        "descricao": "R$ 1.500 a R$ 3.000"
+      },
+      "7": {
+        "codigo": "3000_5000",
+        "min": 3000,
+        "max": 5000,
+        "descricao": "R$ 3.000 a R$ 5.000"
+      },
+      "8": {
+        "codigo": "acima_5000",
+        "min": 5000,
+        "max": null,
+        "descricao": "Acima de R$ 5.000"
+      }
+    }
+  },
+  "tipos_imovel": {
+    "1": "apartamento",
+    "2": "casa_terrea",
+    "3": "sobrado",
+    "4": "cobertura",
+    "5": "todos"
+  },
+  "exemplo_database_schema": {
+    "mongodb": {
+      "collection": "imoveis",
+      "schema": {
+        "id": "Number (auto increment)",
+        "titulo": "String",
+        "tipo_negocio": "String (aluguel, compra, ambos)",
+        "tipo_imovel": "String (apartamento, casa_terrea, sobrado, cobertura)",
+        "endereco": "String",
+        "bairro": "String",
+        "cidade": "String",
+        "estado": "String",
+        "cep": "String",
+        "preco": "Number",
+        "dormitorios": "Number",
+        "suites": "Number",
+        "banheiros": "Number",
+        "vagas": "Number",
+        "area_m2": "Number",
+        "area_util": "Number",
+        "tipo_sala": "String (integrada, separada)",
+        "descricao": "String",
+        "fotos": "Array of Strings (URLs)",
+        "caracteristicas": {
+          "condominio": "Number",
+          "iptu": "Number",
+          "mobiliado": "Boolean",
+          "aceita_pets": "Boolean",
+          "andar": "Number",
+          "elevador": "Boolean",
+          "sacada": "Boolean",
+          "churrasqueira": "Boolean",
+          "piscina": "Boolean",
+          "academia": "Boolean",
+          "salao_festas": "Boolean",
+          "playground": "Boolean",
+          "portaria_24h": "Boolean"
+        },
+        "status": "String (disponivel, alugado, vendido, reservado)",
+        "criado_em": "Date",
+        "atualizado_em": "Date",
+        "corretor_responsavel": "ObjectId (referência para collection de corretores)"
+      }
+    }
+  }
+}

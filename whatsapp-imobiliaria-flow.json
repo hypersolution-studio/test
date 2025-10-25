@@ -1,0 +1,1167 @@
+{
+  "name": "WhatsApp Atendimento Imobiliária",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "webhook-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-imobiliaria"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "cliente_numero",
+              "value": "={{ $json.body.from }}"
+            },
+            {
+              "name": "mensagem_recebida",
+              "value": "={{ $json.body.message }}"
+            },
+            {
+              "name": "etapa_atual",
+              "value": "inicio"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "inicializar-dados",
+      "name": "Inicializar Dados Cliente",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.etapa_atual }}",
+              "operation": "equals",
+              "value2": "inicio"
+            }
+          ]
+        }
+      },
+      "id": "verificar-etapa",
+      "name": "Verificar Etapa Atual",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "text": "Olá! 👋 Bem-vindo à nossa imobiliária!\n\nVou te ajudar a encontrar o imóvel perfeito para você.\n\nPara começar, você está buscando:\n\n1️⃣ - Aluguel\n2️⃣ - Compra\n\nPor favor, responda com o número da opção desejada.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-boas-vindas",
+      "name": "Mensagem Boas-Vindas",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { etapa: 'tipo_negocio', cliente: $json.cliente_numero } }}",
+        "options": {}
+      },
+      "id": "salvar-etapa-tipo",
+      "name": "Salvar Etapa - Tipo Negócio",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1050, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equals",
+              "value2": "1"
+            }
+          ]
+        }
+      },
+      "id": "decisao-tipo-negocio",
+      "name": "Decisão Tipo Negócio",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_negocio",
+              "value": "aluguel"
+            }
+          ]
+        }
+      },
+      "id": "set-aluguel",
+      "name": "Definir Aluguel",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1050, 350]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_negocio",
+              "value": "compra"
+            }
+          ]
+        }
+      },
+      "id": "set-compra",
+      "name": "Definir Compra",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1050, 450]
+    },
+    {
+      "parameters": {
+        "text": "Perfeito! Você escolheu {{ $json.tipo_negocio }}.\n\nAgora, qual é o seu orçamento/ticket médio?\n\n1️⃣ - Até R$ 500.000\n2️⃣ - R$ 500.000 a R$ 1.000.000\n3️⃣ - R$ 1.000.000 a R$ 2.000.000\n4️⃣ - Acima de R$ 2.000.000\n5️⃣ - Até R$ 1.500 (aluguel)\n6️⃣ - R$ 1.500 a R$ 3.000 (aluguel)\n7️⃣ - R$ 3.000 a R$ 5.000 (aluguel)\n8️⃣ - Acima de R$ 5.000 (aluguel)\n\nResponda com o número correspondente.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-orcamento",
+      "name": "Mensagem Orçamento",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "decisao-orcamento",
+      "name": "Decisão Orçamento",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "faixa_preco",
+              "value": "ate_500k"
+            }
+          ]
+        }
+      },
+      "id": "set-faixa-1",
+      "name": "Faixa Até 500k",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1650, 250]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "faixa_preco",
+              "value": "500k_1m"
+            }
+          ]
+        }
+      },
+      "id": "set-faixa-2",
+      "name": "Faixa 500k-1M",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [1650, 350]
+    },
+    {
+      "parameters": {
+        "text": "Ótimo! Agora me conte mais sobre o imóvel dos seus sonhos:\n\n📍 Quantos dormitórios você precisa?\n\n1️⃣ - 1 dormitório\n2️⃣ - 2 dormitórios\n3️⃣ - 3 dormitórios\n4️⃣ - 4 ou mais dormitórios\n\nResponda com o número.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-dormitorios",
+      "name": "Mensagem Dormitórios",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [1850, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "decisao-dormitorios",
+      "name": "Decisão Dormitórios",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [2050, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "num_dormitorios",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "id": "set-dorm-1",
+      "name": "1 Dormitório",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2250, 250]
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "num_dormitorios",
+              "value": 2
+            }
+          ]
+        }
+      },
+      "id": "set-dorm-2",
+      "name": "2 Dormitórios",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2250, 350]
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "num_dormitorios",
+              "value": 3
+            }
+          ]
+        }
+      },
+      "id": "set-dorm-3",
+      "name": "3 Dormitórios",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2250, 450]
+    },
+    {
+      "parameters": {
+        "text": "Perfeito! Agora sobre o tipo de imóvel:\n\n🏠 Você prefere:\n\n1️⃣ - Apartamento\n2️⃣ - Casa térrea\n3️⃣ - Sobrado\n4️⃣ - Cobertura\n5️⃣ - Qualquer tipo\n\nResponda com o número.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-tipo-imovel",
+      "name": "Mensagem Tipo Imóvel",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [2450, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "decisao-tipo-imovel",
+      "name": "Decisão Tipo Imóvel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [2650, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_imovel",
+              "value": "apartamento"
+            }
+          ]
+        }
+      },
+      "id": "set-apartamento",
+      "name": "Apartamento",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2850, 250]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_imovel",
+              "value": "casa_terrea"
+            }
+          ]
+        }
+      },
+      "id": "set-casa",
+      "name": "Casa Térrea",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [2850, 350]
+    },
+    {
+      "parameters": {
+        "text": "Sobre a sala, você prefere:\n\n1️⃣ - Sala integrada (conceito aberto)\n2️⃣ - Sala separada\n3️⃣ - Tanto faz\n\nResponda com o número.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-sala",
+      "name": "Mensagem Sala",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [3050, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "decisao-sala",
+      "name": "Decisão Sala",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [3250, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_sala",
+              "value": "integrada"
+            }
+          ]
+        }
+      },
+      "id": "set-sala-integrada",
+      "name": "Sala Integrada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [3450, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "tipo_sala",
+              "value": "separada"
+            }
+          ]
+        }
+      },
+      "id": "set-sala-separada",
+      "name": "Sala Separada",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [3450, 400]
+    },
+    {
+      "parameters": {
+        "text": "Mais algumas informações importantes:\n\n🚗 Quantas vagas de garagem?\n\n1️⃣ - 1 vaga\n2️⃣ - 2 vagas\n3️⃣ - 3 ou mais vagas\n4️⃣ - Não precisa\n\nResponda com o número.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-garagem",
+      "name": "Mensagem Garagem",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [3650, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.mensagem_recebida }}",
+              "operation": "equal",
+              "value2": 1
+            }
+          ]
+        }
+      },
+      "id": "decisao-garagem",
+      "name": "Decisão Garagem",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [3850, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "number": [
+            {
+              "name": "vagas_garagem",
+              "value": 1
+            }
+          ]
+        }
+      },
+      "id": "set-garagem",
+      "name": "Definir Vagas",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [4050, 400]
+    },
+    {
+      "parameters": {
+        "text": "Por fim, em qual região você prefere?\n\nPor favor, digite o nome do bairro ou região de interesse.\n\nExemplo: Centro, Zona Sul, etc.",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-localizacao",
+      "name": "Mensagem Localização",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [4250, 400]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "localizacao",
+              "value": "={{ $json.mensagem_recebida }}"
+            }
+          ]
+        }
+      },
+      "id": "set-localizacao",
+      "name": "Definir Localização",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [4450, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://sua-api-imoveis.com/buscar",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "tipo_negocio",
+              "value": "={{ $json.tipo_negocio }}"
+            },
+            {
+              "name": "faixa_preco",
+              "value": "={{ $json.faixa_preco }}"
+            },
+            {
+              "name": "dormitorios",
+              "value": "={{ $json.num_dormitorios }}"
+            },
+            {
+              "name": "tipo_imovel",
+              "value": "={{ $json.tipo_imovel }}"
+            },
+            {
+              "name": "tipo_sala",
+              "value": "={{ $json.tipo_sala }}"
+            },
+            {
+              "name": "vagas",
+              "value": "={{ $json.vagas_garagem }}"
+            },
+            {
+              "name": "localizacao",
+              "value": "={{ $json.localizacao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "buscar-imoveis",
+      "name": "Buscar Imóveis no Estoque",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [4650, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.imoveis.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "verificar-resultados",
+      "name": "Verificar Resultados",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [4850, 400]
+    },
+    {
+      "parameters": {
+        "text": "🎉 Ótimas notícias! Encontrei {{ $json.imoveis.length }} imóveis que correspondem ao seu perfil!\n\nVou enviar os links para você:",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-resultados-encontrados",
+      "name": "Resultados Encontrados",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [5050, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-imoveis",
+      "name": "Loop Imóveis",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [5250, 300]
+    },
+    {
+      "parameters": {
+        "text": "🏡 *{{ $json.titulo }}*\n\n📍 Localização: {{ $json.endereco }}\n💰 Valor: R$ {{ $json.preco }}\n🛏️ Dormitórios: {{ $json.dormitorios }}\n🚗 Vagas: {{ $json.vagas }}\n📐 Área: {{ $json.area_m2 }}m²\n\n🔗 Link: {{ $json.link }}\n\n{{ $json.descricao }}",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "enviar-imovel",
+      "name": "Enviar Detalhes do Imóvel",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [5450, 300]
+    },
+    {
+      "parameters": {
+        "text": "😔 Infelizmente não encontrei imóveis que correspondam exatamente ao seu perfil no momento.\n\nMas não se preocupe! Vou registrar suas preferências e nossa equipe entrará em contato assim que tivermos opções disponíveis.\n\n📞 Você também pode falar diretamente com um de nossos consultores:\n\nTelefone: (11) 9999-9999\nEmail: contato@imobiliaria.com.br\n\nObrigado pelo interesse! 🏠",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-sem-resultados",
+      "name": "Sem Resultados",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [5050, 500]
+    },
+    {
+      "parameters": {
+        "url": "=https://sua-api-crm.com/leads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefone",
+              "value": "={{ $json.cliente_numero }}"
+            },
+            {
+              "name": "tipo_negocio",
+              "value": "={{ $json.tipo_negocio }}"
+            },
+            {
+              "name": "faixa_preco",
+              "value": "={{ $json.faixa_preco }}"
+            },
+            {
+              "name": "dormitorios",
+              "value": "={{ $json.num_dormitorios }}"
+            },
+            {
+              "name": "tipo_imovel",
+              "value": "={{ $json.tipo_imovel }}"
+            },
+            {
+              "name": "preferencias",
+              "value": "={{ JSON.stringify($json) }}"
+            },
+            {
+              "name": "data_atendimento",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "salvar-lead-crm",
+      "name": "Salvar Lead no CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [5050, 600]
+    },
+    {
+      "parameters": {
+        "text": "✅ Atendimento finalizado!\n\nSe precisar de mais informações ou quiser buscar outros imóveis, é só me chamar novamente!\n\nTenha um ótimo dia! 😊",
+        "additionalFields": {
+          "to": "={{ $json.cliente_numero }}"
+        }
+      },
+      "id": "mensagem-finalizacao",
+      "name": "Mensagem Finalização",
+      "type": "n8n-nodes-base.whatsapp",
+      "typeVersion": 1,
+      "position": [5650, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "=OK"
+      },
+      "id": "resposta-webhook",
+      "name": "Resposta Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [5850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Dados Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Dados Cliente": {
+      "main": [
+        [
+          {
+            "node": "Verificar Etapa Atual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Etapa Atual": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Boas-Vindas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Boas-Vindas": {
+      "main": [
+        [
+          {
+            "node": "Salvar Etapa - Tipo Negócio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Etapa - Tipo Negócio": {
+      "main": [
+        [
+          {
+            "node": "Decisão Tipo Negócio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Tipo Negócio": {
+      "main": [
+        [
+          {
+            "node": "Definir Aluguel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Definir Compra",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Aluguel": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Orçamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Compra": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Orçamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Orçamento": {
+      "main": [
+        [
+          {
+            "node": "Decisão Orçamento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Orçamento": {
+      "main": [
+        [
+          {
+            "node": "Faixa Até 500k",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Faixa 500k-1M",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faixa Até 500k": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Dormitórios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faixa 500k-1M": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Dormitórios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Dormitórios": {
+      "main": [
+        [
+          {
+            "node": "Decisão Dormitórios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Dormitórios": {
+      "main": [
+        [
+          {
+            "node": "1 Dormitório",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "2 Dormitórios",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "3 Dormitórios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1 Dormitório": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Tipo Imóvel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2 Dormitórios": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Tipo Imóvel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 Dormitórios": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Tipo Imóvel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Tipo Imóvel": {
+      "main": [
+        [
+          {
+            "node": "Decisão Tipo Imóvel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Tipo Imóvel": {
+      "main": [
+        [
+          {
+            "node": "Apartamento",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Casa Térrea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apartamento": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Sala",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Casa Térrea": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Sala",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Sala": {
+      "main": [
+        [
+          {
+            "node": "Decisão Sala",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Sala": {
+      "main": [
+        [
+          {
+            "node": "Sala Integrada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sala Separada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sala Integrada": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Garagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sala Separada": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Garagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Garagem": {
+      "main": [
+        [
+          {
+            "node": "Decisão Garagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decisão Garagem": {
+      "main": [
+        [
+          {
+            "node": "Definir Vagas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Vagas": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Localização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Localização": {
+      "main": [
+        [
+          {
+            "node": "Definir Localização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Localização": {
+      "main": [
+        [
+          {
+            "node": "Buscar Imóveis no Estoque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Imóveis no Estoque": {
+      "main": [
+        [
+          {
+            "node": "Verificar Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Resultados": {
+      "main": [
+        [
+          {
+            "node": "Resultados Encontrados",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sem Resultados",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salvar Lead no CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resultados Encontrados": {
+      "main": [
+        [
+          {
+            "node": "Loop Imóveis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Imóveis": {
+      "main": [
+        [
+          {
+            "node": "Enviar Detalhes do Imóvel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mensagem Finalização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Detalhes do Imóvel": {
+      "main": [
+        [
+          {
+            "node": "Loop Imóveis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sem Resultados": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Finalização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Lead no CRM": {
+      "main": [
+        [
+          {
+            "node": "Mensagem Finalização",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mensagem Finalização": {
+      "main": [
+        [
+          {
+            "node": "Resposta Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-10-25T00:00:00.000Z",
+  "versionId": "1"
+}
