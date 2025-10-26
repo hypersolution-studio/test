@@ -1,0 +1,464 @@
+{
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "evolution-whatsapp-bot"
+  },
+  "name": "Evolution API - WhatsApp Imobiliária",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-evolution-001",
+      "name": "Webhook Evolution API",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "evolution-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrair dados do webhook da Evolution API\nconst data = $input.item.json;\n\n// Evolution API envia dados em formato específico\nconst event = data.event || 'MESSAGES_UPSERT';\n\n// Dados da mensagem\nconst messageData = data.data || {};\nconst key = messageData.key || {};\nconst message = messageData.message || {};\n\n// Extrair número do remetente (remover @s.whatsapp.net)\nconst remoteJid = key.remoteJid || '';\nconst telefone = remoteJid.replace('@s.whatsapp.net', '');\n\n// Extrair texto da mensagem (vários formatos possíveis)\nlet textoMensagem = '';\nif (message.conversation) {\n  textoMensagem = message.conversation;\n} else if (message.extendedTextMessage && message.extendedTextMessage.text) {\n  textoMensagem = message.extendedTextMessage.text;\n} else if (message.imageMessage && message.imageMessage.caption) {\n  textoMensagem = message.imageMessage.caption;\n} else if (message.listResponseMessage) {\n  textoMensagem = message.listResponseMessage.singleSelectReply.selectedRowId;\n} else if (message.buttonsResponseMessage) {\n  textoMensagem = message.buttonsResponseMessage.selectedButtonId;\n}\n\n// Verificar se é mensagem enviada por você (ignore)\nconst fromMe = key.fromMe || false;\nif (fromMe) {\n  return null; // Ignorar mensagens enviadas pelo próprio bot\n}\n\n// Dados do contato\nconst pushName = messageData.pushName || 'Cliente';\nconst instanceName = data.instance || 'default';\n\n// Debug info\nconsole.log('Webhook recebido:', {\n  event,\n  telefone,\n  mensagem: textoMensagem,\n  fromMe,\n  pushName\n});\n\nreturn {\n  telefone: telefone,\n  mensagem: textoMensagem.trim(),\n  nome_cliente: pushName,\n  instance: instanceName,\n  event: event,\n  raw_data: data\n};"
+      },
+      "id": "extrair-dados-evolution-001",
+      "name": "Extrair Dados Evolution",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-msg-001",
+              "leftValue": "={{ $json.mensagem }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "filter-phone-001",
+              "leftValue": "={{ $json.telefone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filtrar-mensagens-001",
+      "name": "Filtrar Mensagens Válidas",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sistema de gerenciamento de estado da conversa\nconst telefone = $input.item.json.telefone;\nconst mensagem = $input.item.json.mensagem;\nconst nomeCliente = $input.item.json.nome_cliente;\n\n// Simular banco de dados de sessões (em produção, usar Redis/MongoDB)\nif (!$execution.customData) {\n  $execution.customData = {};\n}\n\nif (!$execution.customData[telefone]) {\n  $execution.customData[telefone] = {\n    etapa: 'inicio',\n    dados: { nome: nomeCliente }\n  };\n}\n\nconst sessao = $execution.customData[telefone];\nlet proximaEtapa = sessao.etapa;\nlet resposta = '';\nlet concluido = false;\n\n// Comandos especiais\nif (mensagem.toLowerCase() === 'reiniciar' || mensagem.toLowerCase() === 'menu') {\n  sessao.etapa = 'inicio';\n  sessao.dados = { nome: nomeCliente };\n  proximaEtapa = 'inicio';\n}\n\n// Máquina de estados do fluxo\nswitch(sessao.etapa) {\n  case 'inicio':\n    resposta = `Olá ${nomeCliente}! 👋\\n\\nBem-vindo à nossa imobiliária!\\n\\nVou te ajudar a encontrar o imóvel perfeito.\\n\\nVocê está buscando:\\n\\n*1* - Aluguel\\n*2* - Compra\\n\\nResponda com o número da opção:`;\n    proximaEtapa = 'tipo_negocio';\n    break;\n    \n  case 'tipo_negocio':\n    if (mensagem === '1') {\n      sessao.dados.tipo = 'aluguel';\n      resposta = `Ótimo! 💰\\n\\n*Aluguel* selecionado.\\n\\nQual sua faixa de orçamento mensal?\\n\\n*1* - Até R$ 1.500\\n*2* - R$ 1.500 a R$ 3.000\\n*3* - R$ 3.000 a R$ 5.000\\n*4* - Acima de R$ 5.000\\n\\nResponda com o número:`;\n    } else if (mensagem === '2') {\n      sessao.dados.tipo = 'compra';\n      resposta = `Ótimo! 🏠\\n\\n*Compra* selecionada.\\n\\nQual sua faixa de investimento?\\n\\n*1* - Até R$ 500.000\\n*2* - R$ 500.000 a R$ 1.000.000\\n*3* - R$ 1.000.000 a R$ 2.000.000\\n*4* - Acima de R$ 2.000.000\\n\\nResponda com o número:`;\n    } else {\n      resposta = '❌ Por favor, responda com *1* para Aluguel ou *2* para Compra.';\n      proximaEtapa = 'tipo_negocio';\n      break;\n    }\n    proximaEtapa = 'orcamento';\n    break;\n    \n  case 'orcamento':\n    const faixas = {\n      '1': { codigo: sessao.dados.tipo === 'aluguel' ? 'ate_1500' : 'ate_500k', nome: sessao.dados.tipo === 'aluguel' ? 'Até R$ 1.500' : 'Até R$ 500.000' },\n      '2': { codigo: sessao.dados.tipo === 'aluguel' ? '1500_3000' : '500k_1m', nome: sessao.dados.tipo === 'aluguel' ? 'R$ 1.500 a R$ 3.000' : 'R$ 500k a R$ 1M' },\n      '3': { codigo: sessao.dados.tipo === 'aluguel' ? '3000_5000' : '1m_2m', nome: sessao.dados.tipo === 'aluguel' ? 'R$ 3.000 a R$ 5.000' : 'R$ 1M a R$ 2M' },\n      '4': { codigo: sessao.dados.tipo === 'aluguel' ? 'acima_5000' : 'acima_2m', nome: sessao.dados.tipo === 'aluguel' ? 'Acima de R$ 5.000' : 'Acima de R$ 2M' }\n    };\n    \n    if (faixas[mensagem]) {\n      sessao.dados.faixa_preco = faixas[mensagem].codigo;\n      sessao.dados.faixa_nome = faixas[mensagem].nome;\n      resposta = `Perfeito! 💰\\n\\n*Faixa selecionada*: ${faixas[mensagem].nome}\\n\\nQuantos *dormitórios* você precisa?\\n\\n*1* - 1 dormitório\\n*2* - 2 dormitórios\\n*3* - 3 dormitórios\\n*4* - 4 ou mais\\n\\nResponda com o número:`;\n      proximaEtapa = 'dormitorios';\n    } else {\n      resposta = '❌ Por favor, escolha uma opção entre *1* e *4*.';\n    }\n    break;\n    \n  case 'dormitorios':\n    if (['1', '2', '3', '4'].includes(mensagem)) {\n      sessao.dados.dormitorios = mensagem === '4' ? '4+' : mensagem;\n      resposta = `Ótimo! 🛏️\\n\\n*${mensagem === '4' ? '4+' : mensagem} ${mensagem === '1' ? 'dormitório' : 'dormitórios'}*\\n\\nQual tipo de imóvel?\\n\\n*1* - Apartamento\\n*2* - Casa térrea\\n*3* - Sobrado\\n*4* - Cobertura\\n*5* - Qualquer tipo\\n\\nResponda com o número:`;\n      proximaEtapa = 'tipo_imovel';\n    } else {\n      resposta = '❌ Por favor, escolha uma opção entre *1* e *4*.';\n    }\n    break;\n    \n  case 'tipo_imovel':\n    const tipos = {\n      '1': 'apartamento',\n      '2': 'casa_terrea',\n      '3': 'sobrado',\n      '4': 'cobertura',\n      '5': 'qualquer'\n    };\n    \n    if (tipos[mensagem]) {\n      sessao.dados.tipo_imovel = tipos[mensagem];\n      resposta = `Legal! 🏠\\n\\nPreferência de *sala*:\\n\\n*1* - Sala integrada (conceito aberto)\\n*2* - Sala separada\\n*3* - Tanto faz\\n\\nResponda com o número:`;\n      proximaEtapa = 'sala';\n    } else {\n      resposta = '❌ Por favor, escolha uma opção entre *1* e *5*.';\n    }\n    break;\n    \n  case 'sala':\n    const tiposSala = {\n      '1': 'integrada',\n      '2': 'separada',\n      '3': 'tanto_faz'\n    };\n    \n    if (tiposSala[mensagem]) {\n      sessao.dados.tipo_sala = tiposSala[mensagem];\n      resposta = `Entendido! 🚗\\n\\n*Vagas de garagem*:\\n\\n*1* - 1 vaga\\n*2* - 2 vagas\\n*3* - 3 ou mais vagas\\n*4* - Não preciso\\n\\nResponda com o número:`;\n      proximaEtapa = 'vagas';\n    } else {\n      resposta = '❌ Por favor, escolha uma opção entre *1* e *3*.';\n    }\n    break;\n    \n  case 'vagas':\n    if (['1', '2', '3', '4'].includes(mensagem)) {\n      sessao.dados.vagas = mensagem === '4' ? '0' : mensagem;\n      resposta = `Ótimo! 📍\\n\\nPor fim, qual *região* você prefere?\\n\\nDigite o nome do bairro ou região:\\n\\n_Exemplo: Centro, Zona Sul, Jardins, etc._`;\n      proximaEtapa = 'localizacao';\n    } else {\n      resposta = '❌ Por favor, escolha uma opção entre *1* e *4*.';\n    }\n    break;\n    \n  case 'localizacao':\n    sessao.dados.localizacao = mensagem;\n    resposta = `Perfeito! ✅\\n\\n━━━━━━━━━━━━━━━━━━\\n*RESUMO DA SUA BUSCA*\\n━━━━━━━━━━━━━━━━━━\\n\\n📋 *Tipo*: ${sessao.dados.tipo}\\n💰 *Faixa*: ${sessao.dados.faixa_nome}\\n🛏️ *Dormitórios*: ${sessao.dados.dormitorios}\\n🏠 *Imóvel*: ${sessao.dados.tipo_imovel}\\n🪟 *Sala*: ${sessao.dados.tipo_sala}\\n🚗 *Vagas*: ${sessao.dados.vagas}\\n📍 *Região*: ${sessao.dados.localizacao}\\n\\n━━━━━━━━━━━━━━━━━━\\n\\n🔍 Buscando imóveis...\\n\\n_Aguarde um momento, por favor._`;\n    proximaEtapa = 'buscar';\n    concluido = true;\n    break;\n    \n  default:\n    resposta = '❌ Erro no fluxo.\\n\\nDigite *menu* para começar novamente.';\n    if (mensagem.toLowerCase() === 'menu' || mensagem.toLowerCase() === 'reiniciar') {\n      proximaEtapa = 'inicio';\n      sessao.dados = { nome: nomeCliente };\n    }\n}\n\n// Atualizar estado\nsessao.etapa = proximaEtapa;\n$execution.customData[telefone] = sessao;\n\nreturn {\n  telefone: telefone,\n  resposta: resposta,\n  etapa_atual: proximaEtapa,\n  dados_coletados: sessao.dados,\n  buscar_imoveis: concluido,\n  instance: $input.item.json.instance\n};"
+      },
+      "id": "logica-conversa-evolution-001",
+      "name": "Lógica Conversacional",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "id": "buscar-check-001",
+              "value1": "={{ $json.buscar_imoveis }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-buscar-imoveis-001",
+      "name": "Deve Buscar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api-imoveis:5000/buscar",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "tipo_negocio",
+              "value": "={{ $json.dados_coletados.tipo }}"
+            },
+            {
+              "name": "faixa_preco",
+              "value": "={{ $json.dados_coletados.faixa_preco }}"
+            },
+            {
+              "name": "dormitorios",
+              "value": "={{ $json.dados_coletados.dormitorios }}"
+            },
+            {
+              "name": "tipo_imovel",
+              "value": "={{ $json.dados_coletados.tipo_imovel }}"
+            },
+            {
+              "name": "tipo_sala",
+              "value": "={{ $json.dados_coletados.tipo_sala }}"
+            },
+            {
+              "name": "vagas",
+              "value": "={{ $json.dados_coletados.vagas }}"
+            },
+            {
+              "name": "localizacao",
+              "value": "={{ $json.dados_coletados.localizacao }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "buscar-api-imoveis-001",
+      "name": "Buscar Imóveis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 180]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Processar resultados e montar mensagem de resposta\nconst dados = $input.first().json;\nconst imoveis = dados.imoveis || [];\nconst telefone = $('Lógica Conversacional').first().json.telefone;\nconst instance = $('Lógica Conversacional').first().json.instance;\n\nlet mensagemFinal = '';\n\nif (imoveis.length === 0) {\n  mensagemFinal = `😔 *Nenhum imóvel encontrado*\\n\\n━━━━━━━━━━━━━━━━━━\\n\\nInfelizmente não encontrei imóveis disponíveis com esses critérios no momento.\\n\\nMas não se preocupe! 💪\\n\\n✅ Vou registrar seu interesse\\n✅ Nossa equipe entrará em contato quando tivermos opções\\n\\n━━━━━━━━━━━━━━━━━━\\n\\n📞 *Contato direto*:\\nTelefone: (11) 9999-9999\\nEmail: contato@imobiliaria.com.br\\n\\n━━━━━━━━━━━━━━━━━━\\n\\nDigite *menu* para fazer nova busca.\\n\\nObrigado! 🏠`;\n} else {\n  mensagemFinal = `🎉 *Imóveis Encontrados!*\\n\\n━━━━━━━━━━━━━━━━━━\\n\\nEncontrei *${imoveis.length}* ${imoveis.length === 1 ? 'imóvel' : 'imóveis'} perfeito${imoveis.length === 1 ? '' : 's'} para você!\\n\\n`;\n  \n  // Adicionar detalhes de cada imóvel (máximo 3 por mensagem)\n  const imoveisParaMostrar = imoveis.slice(0, 3);\n  \n  imoveisParaMostrar.forEach((imovel, index) => {\n    mensagemFinal += `\\n━━━━━━━━━━━━━━━━━━\\n`;\n    mensagemFinal += `\\n🏡 *${imovel.titulo}*\\n\\n`;\n    mensagemFinal += `📍 ${imovel.endereco}\\n`;\n    \n    // Formatar preço\n    const precoFormatado = new Intl.NumberFormat('pt-BR', {\n      style: 'currency',\n      currency: 'BRL',\n      minimumFractionDigits: 0\n    }).format(imovel.preco);\n    \n    mensagemFinal += `💰 *${precoFormatado}*\\n`;\n    mensagemFinal += `🛏️ ${imovel.dormitorios} ${imovel.dormitorios === 1 ? 'dormitório' : 'dormitórios'}\\n`;\n    mensagemFinal += `🚗 ${imovel.vagas} ${imovel.vagas === 1 ? 'vaga' : 'vagas'}\\n`;\n    mensagemFinal += `📐 ${imovel.area_m2}m²\\n`;\n    \n    if (imovel.caracteristicas) {\n      const detalhes = [];\n      if (imovel.caracteristicas.mobiliado) detalhes.push('✨ Mobiliado');\n      if (imovel.caracteristicas.aceita_pets) detalhes.push('🐾 Aceita pets');\n      if (imovel.caracteristicas.piscina) detalhes.push('🏊 Piscina');\n      if (imovel.caracteristicas.academia) detalhes.push('💪 Academia');\n      if (detalhes.length > 0) {\n        mensagemFinal += `\\n${detalhes.join(' • ')}\\n`;\n      }\n    }\n    \n    mensagemFinal += `\\n🔗 ${imovel.link}\\n`;\n    \n    if (imovel.descricao) {\n      const descShort = imovel.descricao.substring(0, 100);\n      mensagemFinal += `\\n_${descShort}${imovel.descricao.length > 100 ? '...' : ''}_\\n`;\n    }\n  });\n  \n  if (imoveis.length > 3) {\n    mensagemFinal += `\\n━━━━━━━━━━━━━━━━━━\\n`;\n    mensagemFinal += `\\n➕ *E mais ${imoveis.length - 3} ${imoveis.length - 3 === 1 ? 'imóvel' : 'imóveis'}!*\\n`;\n  }\n  \n  mensagemFinal += `\\n━━━━━━━━━━━━━━━━━━\\n\\n📞 *Agendar visita?*\\nLigue: (11) 9999-9999\\n\\n━━━━━━━━━━━━━━━━━━\\n\\nDigite *menu* para nova busca! 🔍`;\n}\n\nreturn {\n  telefone: telefone,\n  mensagem: mensagemFinal,\n  total_imoveis: imoveis.length,\n  imoveis: imoveis,\n  instance: instance\n};"
+      },
+      "id": "formatar-resposta-imoveis-001",
+      "name": "Formatar Resposta Imóveis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api-imoveis:5000/leads",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "telefone",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "dados",
+              "value": "={{ JSON.stringify($('Lógica Conversacional').first().json.dados_coletados) }}"
+            },
+            {
+              "name": "total_imoveis_encontrados",
+              "value": "={{ $json.total_imoveis }}"
+            },
+            {
+              "name": "data_atendimento",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "salvar-lead-crm-001",
+      "name": "Salvar Lead CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1780, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "resp-final-001",
+              "name": "mensagem_final",
+              "value": "={{ $json.mensagem }}",
+              "type": "string"
+            },
+            {
+              "id": "resp-tel-001",
+              "name": "telefone",
+              "value": "={{ $json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "resp-inst-001",
+              "name": "instance",
+              "value": "={{ $json.instance }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prep-resp-busca-001",
+      "name": "Preparar Resposta Busca",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [2000, 180]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "resp-conv-001",
+              "name": "mensagem_final",
+              "value": "={{ $json.resposta }}",
+              "type": "string"
+            },
+            {
+              "id": "resp-conv-002",
+              "name": "telefone",
+              "value": "={{ $json.telefone }}",
+              "type": "string"
+            },
+            {
+              "id": "resp-conv-003",
+              "name": "instance",
+              "value": "={{ $json.instance }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "prep-resp-conv-001",
+      "name": "Preparar Resposta Conversa",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [1340, 420]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "multiplex",
+        "options": {}
+      },
+      "id": "merge-respostas-001",
+      "name": "Merge Respostas",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://evolution-api:8080/message/sendText/{{ $json.instance }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sua-chave-secreta-aqui-12345"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.telefone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.mensagem_final }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "enviar-evolution-api-001",
+      "name": "Enviar via Evolution API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK"
+      },
+      "id": "respond-webhook-001",
+      "name": "Responder Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2660, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Extrair Dados Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair Dados Evolution": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Mensagens Válidas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Mensagens Válidas": {
+      "main": [
+        [
+          {
+            "node": "Lógica Conversacional",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lógica Conversacional": {
+      "main": [
+        [
+          {
+            "node": "Deve Buscar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deve Buscar?": {
+      "main": [
+        [
+          {
+            "node": "Buscar Imóveis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Resposta Conversa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Imóveis": {
+      "main": [
+        [
+          {
+            "node": "Formatar Resposta Imóveis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Resposta Imóveis": {
+      "main": [
+        [
+          {
+            "node": "Salvar Lead CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Lead CRM": {
+      "main": [
+        [
+          {
+            "node": "Preparar Resposta Busca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resposta Busca": {
+      "main": [
+        [
+          {
+            "node": "Merge Respostas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Resposta Conversa": {
+      "main": [
+        [
+          {
+            "node": "Merge Respostas",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Respostas": {
+      "main": [
+        [
+          {
+            "node": "Enviar via Evolution API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar via Evolution API": {
+      "main": [
+        [
+          {
+            "node": "Responder Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "id": "evolution-whatsapp-imobiliaria",
+  "tags": [],
+  "triggerCount": 1,
+  "createdAt": "2025-10-25T00:00:00.000Z",
+  "updatedAt": "2025-10-25T00:00:00.000Z",
+  "versionId": "1",
+  "active": false
+}

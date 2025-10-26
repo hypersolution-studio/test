@@ -67,6 +67,92 @@ services:
       - imobiliaria-network
     restart: unless-stopped
 
+  # PostgreSQL - Banco de dados para Evolution API
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-evolution
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=evolution
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - imobiliaria-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Evolution API - WhatsApp Integration
+  evolution-api:
+    image: atendai/evolution-api:v2.1.1
+    container_name: evolution-api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # Configurações básicas
+      - SERVER_URL=http://localhost:8080
+      - AUTHENTICATION_API_KEY=Change-Me-12345-Secret-Key-Here
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+
+      # Configurações de armazenamento
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://postgres:postgres@postgres:5432/evolution
+      - DATABASE_SAVE_DATA_INSTANCE=true
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
+      - DATABASE_SAVE_MESSAGE_UPDATE=true
+      - DATABASE_SAVE_DATA_CONTACTS=true
+      - DATABASE_SAVE_DATA_CHATS=true
+
+      # Redis para cache e sessões
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/1
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=true
+
+      # Configurações de Webhook Global
+      - WEBHOOK_GLOBAL_ENABLED=false
+      - WEBHOOK_GLOBAL_URL=http://n8n:5678/webhook/whatsapp-webhook
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true
+
+      # Configurações de QR Code
+      - QRCODE_LIMIT=30
+      - QRCODE_COLOR=#175197
+
+      # Configurações de logs
+      - LOG_LEVEL=ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS
+      - LOG_COLOR=true
+      - LOG_BAILEYS=error
+
+      # Configurações de instância
+      - DEL_INSTANCE=false
+      - DEL_TEMP_INSTANCES=true
+
+      # Configurações de autenticação
+      - AUTHENTICATION_TYPE=apikey
+
+      # Configurações de integração
+      - CONFIG_SESSION_PHONE_CLIENT=Evolution API
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+    networks:
+      - imobiliaria-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
 networks:
   imobiliaria-network:
     driver: bridge
@@ -75,3 +161,6 @@ volumes:
   n8n-data:
   mongodb-data:
   redis-data:
+  postgres_data:
+  evolution_instances:
+  evolution_store:
